@@ -530,3 +530,8 @@ form .related-widget-wrapper ul {
 .clearable-file-input input {
     margin-top: 0;
 }
+
+.group-style {
+    padding-left: 10px;
+    padding-right: 10px;
+}

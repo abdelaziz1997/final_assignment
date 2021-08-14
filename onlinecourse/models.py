@@ -114,6 +114,15 @@ class Question(models.Model):
             return True
         else:
             return False
+    
+    # Get question score
+    def get_score(self, selected_ids):
+        all_answers = self.choice_set.filter(is_correct=True).count()
+        selected_correct = self.choice_set.filter(is_correct=True, id__in=selected_ids).count()
+        if all_answers == selected_correct:
+            return self.grade
+        else:
+            return ( self.grade * selected_correct ) / all_answers
 
 
 #  <HINT> Create a Choice Model with:

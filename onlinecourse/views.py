@@ -1,11 +1,12 @@
 from django.shortcuts import render
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, HttpResponse
 # <HINT> Import any new Models here
 from .models import Course, Enrollment, Question, Choice, Submission
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse
 from django.views import generic
+from django.template import loader
 from django.contrib.auth import login, logout, authenticate
 import logging
 # Get an instance of a logger
@@ -114,8 +115,9 @@ def submit(request, course_id):
     user = request.user
     course = get_object_or_404(Course, pk=course_id)
     enrollment = Enrollment.objects.get(user = user, course = course)
-    submission = Submission.objects.create(enrollment = enrollment, choices = extract_answers(request))
-    return HttpResponseRedirect(reverse(viewname = "onlinecourse:submit"))
+    submission = Submission.objects.create(enrollment = enrollment)
+    submission.choices.set(extract_answers(request))
+    return HttpResponseRedirect(reverse(viewname = "onlinecourse:show_exam_result", args = [course_id, submission.id]))
 
 
 # <HINT> A example method to collect the selected choices from the exam form from the request object
@@ -136,11 +138,31 @@ def extract_answers(request):
         # For each selected choice, check if it is a correct answer or not
         # Calculate the total score
 def show_exam_result(request, course_id, submission_id):
+    template = loader.get_template('onlinecourse/exam_result_bootstrap.html')
     course = get_object_or_404(Course, pk = course_id )
     submission = get_object_or_404(Submission, pk = submission_id)
-    selected_choice_ids = submission.choices
-    for choice_id in selected_choice_ids:
-        choice = get_object_or_404(Choice, pk = choice_id)
+    selected_choice_ids = submission.choices.all()
+    questions = course.question_set.all()
+    total_score = 0
+    # full Grade without percentage
+    perfect_course_grade = 0
+    for question in questions:
+        total_score = total_score + question.get_score(selected_choice_ids)
+        perfect_course_grade = perfect_course_grade + question.grade
+    # get exam result percentage
+    total_score = total_score / perfect_course_grade * 100
+    if total_score == 100:
+        total_score = int(total_score)
+    else:
+        total_score = round(total_score, 1)
+    context = {
+        'course' : course,
+        'selected_choice_ids': selected_choice_ids,
+        'grade': total_score
+    }
+    return HttpResponse(template.render(context, request))
+        
+
         
 
 
